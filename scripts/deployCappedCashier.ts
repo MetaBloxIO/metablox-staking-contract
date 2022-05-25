@@ -23,24 +23,21 @@ async function main(): Promise<void> {
 
   let _stakingToken = token1.address;
   let _rewardToken = token1.address;
-  let _rewardAmount = 5000000;
-  let _startTime = Math.round(new Date().getTime()/1000) + 60 * 3;
-  console.log("_startTime: ", _startTime);
+  // let _startTime = Math.round(new Date().getTime()/1000) + 60 * 3;
+  // console.log("_startTime: ", _startTime);
   let _cap = "5000000000000000000000000";
   let _minPerTime = "200000000000000000000";
   let _maxPerAddress = "500000000000000000000000";
   const token: Contract = await Token.deploy(
     _stakingToken,
     _rewardToken,
-    _rewardAmount,
-    _startTime,
     _cap,
     _minPerTime,
     _maxPerAddress
   );
 
   await token.deployed();
-  console.log("token deployed to: ", token.address);
+  console.log("contract deployed to: ", token.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
