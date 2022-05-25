@@ -18,15 +18,9 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
         uint256 timestamp;
     }
 
-    Counters.Counter private _roundNum;
     address public override stakingToken;
     address public override rewardToken;
-    uint256 public override rewardAmount;
     uint256 public override totalStaked;
-    uint256 public override startTime;
-    uint256 public override stopTime;
-    uint256 public override duration;
-    bool public rewardLoaded;
 
     mapping(address => Stakeholder) public stakeholders;
 
@@ -37,77 +31,32 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
 
     event Staked(address indexed staker, uint256 amount);
     event Withdrawal(address indexed staker, uint256 rewardAmount);
-    event Reward(address indexed staker, uint256 rewardAmount);
 
-    event NewRound(uint256 startTime,uint256 stopTime,uint256 rewardAmount,uint256 roundNum);
-    event StakingEnabled(uint256 startTime,uint256 stopTime,uint256 rewardAmount,uint256 roundNum);
-
-    constructor(
-        address _stakingToken,
-        address _rewardToken,
-        uint256 _rewardAmount,
-        uint256 _startTime,
-        uint256 _stopTime
-    ) EIP712("MetaBlox","1"){
-        require( _stakingToken.isContract(), "Staking: stakingToken not a contract address");
+    constructor(address _stakingToken, address _rewardToken)
+        EIP712("MetaBlox", "1")
+    {
+        require(_stakingToken.isContract(),"Staking: stakingToken not a contract address");
         require( _rewardToken.isContract(),"Staking: rewardToken not a contract address");
-        require( _rewardAmount > 0,"Staking: rewardAmount must be greater than zero");
-        require(block.timestamp <= _startTime, "Staking: incorrect timestamp");
-
         stakingToken = _stakingToken;
         rewardToken = _rewardToken;
-        rewardAmount = _rewardAmount;
-        startTime = _startTime;
-        stopTime = _stopTime;
-        duration = _stopTime - _startTime;
-        _roundNum.increment();
     }
 
     /**
-     * @dev after the contract deployed , recharge spec token for rewarding in future
-     *  Requirement: 
-     *     Approve rewardToken to this contract
+     * @dev start staking
      */
-    function loadReward() external {
-        require(!rewardLoaded,"Staking: Rewards has loaded into the contract");
-        IERC20(rewardToken).transferFrom( _msgSender(),address(this),rewardAmount);
-        rewardLoaded = true;
-        emit StakingEnabled(startTime,stopTime,rewardAmount,roundNum());
-    }
-
-    /**
-     * @dev start staking 
-    */
     function stake(uint256 _amount) public virtual override whenNotPaused {
-        require(rewardLoaded,"Staking: Rewards not loaded into the contract yet");
         require(_amount > 0, "Staking: amount can't be 0");
-        require(block.timestamp >= startTime, "Staking: staking not started");
-        require(block.timestamp < stopTime, "Staking: staking has stoped");
-
         Stakeholder storage stakeholder = stakeholders[_msgSender()];
         stakeholder.staked += _amount;
         if (stakeholder.timestamp == 0) {
             stakeholder.timestamp = block.timestamp;
         }
         totalStaked += _amount;
-
         IERC20(stakingToken).transferFrom(_msgSender(), address(this), _amount);
-
         emit Staked(_msgSender(), _amount);
     }
 
-     /**
-      * @dev withdraw principal only
-      */
-    function withdraw() public virtual override whenNotPaused {
-        Stakeholder memory stakeholder = stakeholders[_msgSender()];
-        require(stakeholder.staked > 0,"Withdrawing: you have not participated in staking");
-        require(block.timestamp > stopTime, "Staking: staking peroid not ended");
-        delete stakeholders[_msgSender()];
-        _withdrawStaked(_msgSender(), stakeholder.staked);
-    }
-
-    function withdrawRewardPermit(
+    function withdrawPermit(
         uint256 value,
         uint256 deadline,
         uint8 v,
@@ -115,8 +64,8 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
         bytes32 s
     ) public virtual override whenNotPaused {
         Stakeholder memory stakeholder = stakeholders[_msgSender()];
-        require(  stakeholder.staked > 0, "WithdrawRewardPermit: you have not participated in staking" );
-        require( block.timestamp <= deadline, "WithdrawRewardPermit: expired deadline" );
+        require(stakeholder.staked > 0,"WithdrawPermit: you have not participated in staking");
+        require(block.timestamp <= deadline,"WithdrawPermit: expired deadline");
 
         bytes32 structHash = keccak256(
             abi.encode(
@@ -133,7 +82,7 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
         address signer = ECDSA.recover(hash, v, r, s);
         require(signer == owner(), "WithdrawRewardPermit: invalid signature");
 
-        _withdrawReward(_msgSender(), value);
+        _withdraw(_msgSender(), value);
     }
 
     function getRewardTokenBalance() public view override returns (uint256) {
@@ -148,35 +97,22 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
         return stakeholders[_stakeholder].staked;
     }
 
-    function _withdrawStaked(address _to, uint256 _amount) internal {
-        IERC20(stakingToken).transfer(_to, _amount);
-
-        emit Withdrawal(_msgSender(), _amount);
-    }
-
-    function _withdrawReward(address _to, uint256 _reward) internal {
-        require(rewardAmount > _reward,"WithdrawingReward: rewardAmount not enough");
+    function _withdraw(address _to, uint256 _reward) internal {
         IERC20(rewardToken).transfer(_to, _reward);
 
-        emit Reward(_msgSender(), _reward);
+        emit Withdrawal(_msgSender(), _reward);
     }
-
-
-    /**
-     * @dev Returns whether stakers can withdraw their principal + rewards.
-     */
-    function withdrawalAllowed() public view returns (bool) {
-        return block.timestamp >= stopTime;
-    }
-
-    
 
     /**
      * @dev "Consume a nonce": return the current value and increment.
      *
      * _Available since v4.1._
      */
-    function _useNonce(address staker)internal virtual returns (uint256 current){
+    function _useNonce(address staker)
+        internal
+        virtual
+        returns (uint256 current)
+    {
         Counters.Counter storage nonce = _nonces[staker];
         current = nonce.current();
         nonce.increment();
@@ -188,32 +124,6 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
     function nonces(address staker) public view virtual returns (uint256) {
         return _nonces[staker].current();
     }
-
-
-     /**
-      * @dev record current round number
-      */
-     function roundNum() public view override returns (uint256){
-       return _roundNum.current();
-     }
-
-
-    /**
-     * @dev start new round for staking
-     */
-    function newRound(uint256 _startTime,uint256 _stopTime,uint256 _rewardAmount) external virtual override onlyOwner{
-        require(block.timestamp >= stopTime + 60*60*24,"Staking: can only start the day after the last round");
-         _roundNum.increment();
-        rewardLoaded = false;
-        rewardAmount = _rewardAmount;
-        startTime = _startTime;
-        stopTime = _stopTime;
-        duration = _stopTime - _startTime;
-
-        emit NewRound(_startTime, _stopTime, _rewardAmount, roundNum());
-    }
-
-
 
     function pause() public onlyOwner {
         _pause();

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { Cashier } from "./Cashier.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CappedCashier is Cashier {
+    using Address for address;
     uint256 public capacity;
     uint256 public minStakePerTime;
     uint256 public maxStakePerAddress;
@@ -17,13 +19,10 @@ contract CappedCashier is Cashier {
     constructor(
         address _stakingToken,
         address _rewardToken,
-        uint256 _rewardAmount,
-        uint256 _startTime,
-        uint256 _stopTime,
         uint256 _capacity,
         uint256 _minStakePerTime,
         uint256 _maxStakePerAddress
-    ) Cashier(_stakingToken, _rewardToken, _rewardAmount, _startTime,_stopTime) {
+    ) Cashier(_stakingToken, _rewardToken) {
         capacity = _capacity;
         minStakePerTime = _minStakePerTime;
         maxStakePerAddress = _maxStakePerAddress;
@@ -65,18 +64,6 @@ contract CappedCashier is Cashier {
 
     function recoverTokens(IERC20 _token) external virtual onlyOwner {
         uint256  balance = _token.balanceOf(address(this));
-
-        if(address(_token)==stakingToken && rewardToken == stakingToken ){
-            require(balance > capacity + rewardAmount,"RecoverTokens: amount beyond (rewardAmount + capacity)");
-            balance = balance -  (capacity + rewardAmount);
-        }else if (address(_token)==rewardToken){
-            require(balance - rewardAmount >0 ,"RecoverTokens: amount beyond rewardAmount");
-            balance = balance - rewardAmount;
-        }else{
-          require(balance - capacity >0 ,"RecoverTokens: amount beyond capacity ");
-          balance = balance - capacity;
-        }
-        
         _token.transfer(owner(), balance);
         emit Recovered(address(_token), balance);
     }
