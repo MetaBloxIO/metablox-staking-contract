@@ -116,7 +116,7 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
         bytes32 r,
         bytes32 s
     ) public virtual override whenNotPaused {
-        Stakeholder storage stakeholder = stakeholders[_msgSender()];
+        Stakeholder memory stakeholder = stakeholders[_msgSender()];
         require(  stakeholder.staked > 0, "WithdrawRewardPermit: you have not participated in staking" );
         require( block.timestamp <= deadline, "WithdrawRewardPermit: expired deadline" );
 
