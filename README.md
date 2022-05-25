@@ -1,12 +1,17 @@
 # MetaBlox ERC20 contract
 
 ## quick start
-```
+
+``` shell
 npm install
 
 npx hardhat compile
 
-npx run test
+npm run test
+
+npx hardhat run scripts/deployMetaBlox.ts
+
+npx hardhat run scripts/deployCappedCashier.ts
 
 ```
 
@@ -17,6 +22,5 @@ npx hardhat compile
 npx hardhat clean
 npx hardhat test
 npx hardhat node
-node scripts/sample-script.js
 npx hardhat help
 ```

@@ -39,7 +39,7 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
     event Withdrawal(address indexed staker, uint256 rewardAmount);
     event Reward(address indexed staker, uint256 rewardAmount);
 
-    event StakingPreparing(uint256 startTime,uint256 stopTime,uint256 rewardAmount,uint256 roundNum);
+    event NewRound(uint256 startTime,uint256 stopTime,uint256 rewardAmount,uint256 roundNum);
     event StakingEnabled(uint256 startTime,uint256 stopTime,uint256 rewardAmount,uint256 roundNum);
 
     constructor(
@@ -212,7 +212,7 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
         stopTime = _stopTime;
         duration = _stopTime - _startTime;
 
-        emit StakingPreparing(_startTime, _stopTime, _rewardAmount, roundNum());
+        emit NewRound(_startTime, _stopTime, _rewardAmount, roundNum());
     }
 
 
