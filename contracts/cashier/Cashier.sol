@@ -100,13 +100,11 @@ contract Cashier is ICashier, Ownable, Pausable, EIP712 {
       * @dev withdraw principal only
       */
     function withdraw() public virtual override whenNotPaused {
-        Stakeholder storage stakeholder = stakeholders[_msgSender()];
+        Stakeholder memory stakeholder = stakeholders[_msgSender()];
         require(stakeholder.staked > 0,"Withdrawing: you have not participated in staking");
         require(block.timestamp > stopTime, "Staking: staking peroid not ended");
-
+        delete stakeholders[_msgSender()];
         _withdrawStaked(_msgSender(), stakeholder.staked);
-        stakeholder.staked = 0;
-        stakeholder.timestamp = 0;
     }
 
     function withdrawRewardPermit(
