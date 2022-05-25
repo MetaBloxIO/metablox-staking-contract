@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { Cashier } from "./Cashier.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract CappedCashier is Cashier {
-    using Address for address;
     uint256 public capacity;
     uint256 public minStakePerTime;
     uint256 public maxStakePerAddress;
